@@ -1,0 +1,142 @@
+version: '1'
+name: Release Version
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: '1.23.1'
+
+      - name: Build Go binary for Linux
+        run: |
+          go mod tidy
+          go build -o s3-client-web_linux.x86_64          
+
+      - name: Build Go binary for Linux (x86)
+        run: |
+          go mod tidy
+          GOARCH=386 go build -o s3-client-web_linux.x86          
+
+      - name: Build Go binary for Linux (ARM64)
+        run: |
+          go mod tidy
+          GOARCH=arm64 go build -o s3-client-web_linux.arm64          
+
+      - name: Build Go binary for Mac OS (x86_64)
+        run: |
+          go mod tidy
+          GOOS=darwin GOARCH=amd64 go build -o s3-client-web_darwin.x86_64.app          
+
+      - name: Build Go binary for Mac OS (ARM64)
+        run: |
+          go mod tidy
+          GOOS=darwin GOARCH=arm64 go build -o s3-client-web_darwin.arm64.app          
+
+      - name: Build Go binary for Linux (ARMv7)
+        run: |
+          go mod tidy
+          GOARCH=arm go build -o s3-client-web_linux.armv7          
+
+      - name: Build Go binary for Linux (RISC-V)
+        run: |
+          go mod tidy
+          GOARCH=riscv64 go build -o s3-client-web_linux.riscv64          
+
+      - name: Build Go binary for Windows
+        run: |
+          GOOS=windows GOARCH=amd64 go build -o s3-client-web_windows.x86_64.exe          
+
+      - name: Build Go binary for Windows (x86)
+        run: |
+          go mod tidy
+          GOOS=windows GOARCH=386 go build -o s3-client-web_windows.x86.exe          
+
+      - name: Build Go binary for Windows (ARM64)
+        run: |
+          go mod tidy
+          GOOS=windows GOARCH=arm64 go build -o s3-client-web_windows.arm64.exe          
+
+      - name: Get latest commit ID
+        id: get_commit
+        run: |
+          commit_id=$(git rev-parse HEAD)
+          echo "commit_id=$commit_id" >> $GITHUB_ENV          
+
+      - name: Get latest version and increment
+        id: create_version
+        run: |
+          if [ "${{ env.main_go_modified }}" = "false" ]; then
+            echo "No changes in main.go, skipping version increment and release creation."
+            exit 0
+          fi
+
+          git fetch --tags
+
+          latest_version=$(git tag | sort -V | tail -n 1 || echo "v0.0.0")
+          new_version=$(echo $latest_version | awk -F. '{printf "v%d.%d.%d", $1, $2, $3+1}')
+
+          while git rev-parse "$new_version" >/dev/null 2>&1; do
+            new_version=$(echo $new_version | awk -F. '{$3+=1; printf "v%d.%d.%d", $1, $2, $3}')
+          done
+
+          echo "latest_version=$latest_version" >> $GITHUB_ENV
+          echo "new_version=$new_version" >> $GITHUB_ENV
+          
+          if git rev-parse "$new_version" >/dev/null 2>&1; then
+            echo "Tag $new_version already exists. Exiting."
+            exit 1
+          fi
+          
+          git tag $new_version
+          git push origin $new_version          
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        with:
+          tag_name: ${{ env.new_version }}
+          release_name: Release ${{ env.new_version }}
+          release_description: |
+            Automatic release by Gitea CI
+            Release version ${{ env.new_version }}.
+            Commit ID: ${{ env.commit_id }}            
+          draft: false
+          prerelease: false
+        env:
+          GITEA_TOKEN: ${{ secrets.TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.TOKEN }}
+
+      - name: Upload Go binaries to release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            ./s3-client-web_linux.x86_64
+            ./s3-client-web_linux.x86
+            ./s3-client-web_linux.armv7
+            ./s3-client-web_linux.arm64
+            ./s3-client-web_linux.riscv64
+            ./s3-client-web_windows.x86_64.exe
+            ./s3-client-web_windows.x86.exe
+            ./s3-client-web_windows.arm64.exe
+            ./s3-client-web_darwin.x86_64.app
+            ./s3-client-web_darwin.arm64.app            
+
+          tag_name: ${{ env.new_version }}
+          name: Release ${{ env.new_version }}
+          body: |
+            Automatic release by Gitea CI
+            Release version ${{ env.new_version }}.
+            Commit ID: ${{ env.commit_id }}            
+        env:
+          GITHUB_TOKEN: ${{ secrets.TOKEN }}
