@@ -1,3 +1,7 @@
 .env
+<<<<<<< HEAD
 bin/*
+=======
+bin
+>>>>>>> 454207d6ae18703f0d99f4d901a2d46c6d7164df
 s3-client*
