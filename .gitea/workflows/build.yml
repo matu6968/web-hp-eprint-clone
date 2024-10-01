@@ -26,7 +26,12 @@ jobs:
       - name: Build Go binary for Linux (x86)
         run: |
           go mod tidy
-          GOARCH=386 go build -o s3-client-web_linux.x86          
+          GOARCH=386 go build -o s3-client-web_linux.x86 
+
+      - name: Build Go binary for Linux (ARMv7)
+        run: |
+          go mod tidy
+          GOARCH=arm go build -o s3-client-web_linux.armv7          
 
       - name: Build Go binary for Linux (ARM64)
         run: |
@@ -42,6 +47,7 @@ jobs:
         run: |
           tar -czvf s3-client-web-linux.x86_64.tar.gz s3-client-web_linux.x86_64 web
           tar -czvf s3-client-web-linux.x86.tar.gz s3-client-web_linux.x86  web
+          tar -czvf s3-client-web-linux.x86_64.tar.gz s3-client-web_linux.armv7 web
           tar -czvf s3-client-web-linux.arm64.tar.gz s3-client-web_linux.arm64 web
           tar -czvf s3-client-web-linux.riscv64.tar.gz s3-client-web_linux.riscv64 web           
 
@@ -102,6 +108,7 @@ jobs:
             ./s3-client-web-linux.x86_64.tar.gz
             ./s3-client-web-linux.x86.tar.gz
             ./s3-client-web-linux.arm64.tar.gz
+            ./s3-client-web-linux.armv7.tar.gz
             ./s3-client-web-linux.riscv64.tar.gz    
 
           tag_name: ${{ env.new_version }}
