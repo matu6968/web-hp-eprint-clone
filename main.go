@@ -30,10 +30,6 @@ func main() {
 		port = "8080"
 	}
 	
-	sendntfynotification := os.Getenv("SENDNTFYMAIL")
-	if sendntfynotification == "" {
-		sendntfynotification = "true"
-	}
 	http.HandleFunc("/", handleIndex)
 	http.HandleFunc("/upload", handleUpload)
 	http.HandleFunc("/delete", handleDelete)
@@ -97,10 +93,6 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	
-	sendntfynotification := os.Getenv("SENDNTFYMAIL")
-	if sendntfynotification == "false" {
-		targetmail = ""
-	}
 	
 	printingcmdPath := filepath.Join("/", "usr", "bin", "eprintcloned")
 	filelog := os.Getenv("LOG")
