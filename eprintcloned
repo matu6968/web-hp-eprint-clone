@@ -1,0 +1,38 @@
+#!/bin/bash
+
+printer=Deskjet-2600 # replace this with your actual printer name
+imagelogmsg="Server hoster decided to enable file logging, if you don't wish your file to be logged, ask the server owner to delete your sent file or if you are the server hoster set FILELOG=nolog in .env file" # add a custom logging of files message
+
+# Loop through each file passed as an argument
+for file in "$1"; do
+  # Get the MIME type of the file
+  mime_type=$(file --mime-type -b "$file")
+
+  # Check if the MIME type is for images, text, or PDF files
+  if [[ "$mime_type" == image/* || "$mime_type" == application/pdf ]]; then
+    if [[ $2 == log ]]; then
+       echo $imagelogmsg
+       cp $1 $HOME/imagelog
+       echo "Printing image/document"
+       lpr -o portrait -o media=A4 $1 -P $printer # if you are using a different printer that requires different commands to print, change this part of the code.
+    else
+       echo "Printing image/document"
+       lpr -o portrait -o media=A4 $1 -P $printer # if you are using a different printer that requires different commands to print, change this part of the code.
+    fi
+  elif [[ "$mime_type" == text/* ]]; then
+       if [[ $2 == log ]]; then
+          echo $imagelogmsg
+          cp $1 $HOME/imagelog 
+          echo "Printing text"
+          lpr -o portrait -o media=A4 $1 -P $printer # if you are using a different printer that requires different commands to print, change this part of the code.
+          ntfymailsend $3
+      else
+          echo "Printing text"
+          lpr -o portrait -o media=A4 $1 -P $printer # if you are using a different printer that requires different commands to print, change this part of the code.
+          ntfymailsend $3
+     fi
+ else
+    echo "Error: Invalid file type or, ePrint clone only accepts the following MIME types: text/*, image/*, application/pdf"
+    exit 1
+ fi
+done

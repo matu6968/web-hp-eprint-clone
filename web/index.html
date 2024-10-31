@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="stylesheet" href="/assets/global.css" />
-    <title>S3-Client Web Wrapper</title>
+    <title>HP ePrint clone Web Wrapper</title>
     <style>
       #uploadStatus,
       #commandOutput {
@@ -13,34 +13,20 @@
     </style>
   </head>
   <body>
-    <div class="header">S3-Client WebGUI</div>
+    <div class="header">HP ePrint like printing WebGUI</div>
 
     <fieldset>
       <legend>File Selection</legend>
       <form id="uploadForm">
-        <input type="file" name="file" required />
+        <input type="file" accept=".jpg, .jpeg, .png, .gif, .txt, .pdf" name="file" required />
         <input
           type="text"
-          name="directory"
-          placeholder="Directory to upload to [Optional]"
+          name="targetmail"
+          placeholder="Confirmation e-mail after printing finishes [Optional]"
           style="width: 210px;"
         />
         <br />
         <button type="submit" class="button">Upload</button>
-      </form>
-    </fieldset>
-
-    <fieldset style="margin-top: 10px">
-      <legend>Delete</legend>
-      <form style="display: flex;" id="deleteForm">
-        <input
-          type="text"
-          name="filename"
-          placeholder="Filename to delete"
-          required
-          style="width: 100%;"
-        />
-        <button style="margin-left: 10px;" type="submit">Delete</button>
       </form>
     </fieldset>
 
@@ -55,8 +41,8 @@
     </fieldset>
 
     <div style="margin-top: 10px;" class="footer">
-        <a href="https://git.fluffy.pw/leafus/s3-client">[ s3-client ]</a> -
-        <a href="https://git.fluffy.pw/leafus/s3-client-web">[ s3-client-web ]</a> - Licensed under MIT
+        <a href="https://git.fluffy.pw/matu6968/web-hp-eprint-clone">[ web-hp-eprint-clone ]</a> -
+        <a href="https://git.fluffy.pw/leafus/s3-client-web">[ forked of s3-client-web ]</a> - Licensed under MIT
     </div>
 
     <script src="/assets/index.js"></script>

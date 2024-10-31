@@ -4,7 +4,7 @@ const commandOutput = document.getElementById('commandOutput');
 
 uploadForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    uploadStatus.textContent = 'Uploading...';
+    uploadStatus.textContent = 'Uploading and printing...';
     commandOutput.textContent = '';
 
     const formData = new FormData(uploadForm);
@@ -25,35 +25,5 @@ uploadForm.addEventListener('submit', async (e) => {
         }
     } catch (error) {
         uploadStatus.textContent = `Error: ${error.message}`;
-    }
-});
-
-const deleteForm = document.getElementById('deleteForm');
-const deleteStatus = document.getElementById('deleteStatus');
-const deleteOutput = document.getElementById('deleteOutput');
-
-deleteForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    deleteStatus.textContent = 'Deleting...';
-    deleteOutput.textContent = '';
-
-    const formData = new FormData(deleteForm);
-
-    try {
-        const response = await fetch('/delete', {
-            method: 'POST',
-            body: formData
-        });
-
-        const result = await response.json();
-
-        if (result.error) {
-            throw new Error(result.error);
-        } else {
-            deleteStatus.textContent = result.message;
-            deleteOutput.textContent = result.output;
-        }
-    } catch (error) {
-        deleteStatus.textContent = `Error: ${error.message}`;
     }
 });

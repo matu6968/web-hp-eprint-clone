@@ -19,12 +19,21 @@ func main() {
 	if err != nil {
 		log.Fatal("Error loading .env file")
 	}
+	
+        filelog := os.Getenv("LOG")
+	if filelog == "" {
+		filelog = "nolog"
+	}
 
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
 	}
-
+	
+	sendntfynotification := os.Getenv("SENDNTFYMAIL")
+	if sendntfynotification == "" {
+		sendntfynotification = "true"
+	}
 	http.HandleFunc("/", handleIndex)
 	http.HandleFunc("/upload", handleUpload)
 	http.HandleFunc("/delete", handleDelete)
@@ -68,9 +77,9 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 	}
 	defer file.Close()
 
-	directory := r.FormValue("directory")
-	if directory == "" {
-		directory = "/"
+	targetmail := r.FormValue("targetmail")
+	if targetmail == "" {
+		fmt.Printf("Warning: User did not specify a mail on sent request")
 	}
 
 	tempFileName := filepath.Join(os.TempDir(), handler.Filename)
@@ -87,18 +96,21 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 		return
 	}
-
-	s3ClientPath := filepath.Join(".", "bin", "s3-client")
-	configFilePath := filepath.Join(".", "bin", "s3config.toml")
-	cmd := exec.Command(s3ClientPath, "-config", configFilePath, "-directory", directory, "-file", tempFile.Name())
-
-	cmd.Args = append(cmd.Args, "-overwrite")
-
+	
+	sendntfynotification := os.Getenv("SENDNTFYMAIL")
+	if sendntfynotification == "false" {
+		targetmail = ""
+	}
+	
+	printingcmdPath := filepath.Join("/", "usr", "bin", "eprintcloned")
+	filelog := os.Getenv("LOG")
+	cmd := exec.Command(printingcmdPath, tempFile.Name(), filelog, targetmail)
+	
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		log.Printf("Error uploading file: %s\n", output)
+		log.Printf("Error printing file: %s\n", output)
 		json.NewEncoder(w).Encode(map[string]string{
-			"error": fmt.Sprintf("Error uploading file to S3: %s", output),
+			"error": fmt.Sprintf("Error printing file to printer: %s", output),
 		})
 		return
 	}
@@ -107,7 +119,7 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 		Message string `json:"message"`
 		Output  string `json:"output"`
 	}{
-		Message: fmt.Sprintf("File %s uploaded successfully", handler.Filename),
+		Message: fmt.Sprintf("File %s printed successfully", handler.Filename),
 		Output:  string(output),
 	}
 
@@ -116,43 +128,6 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 
 func handleDelete(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-
-	if r.Method != http.MethodPost {
-		json.NewEncoder(w).Encode(map[string]string{"error": "Method not allowed"})
-		return
-	}
-
-	err := r.ParseMultipartForm(10 << 20)
-	if err != nil {
-		json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
-		return
-	}
-
-	filename := r.FormValue("filename")
-	if filename == "" {
-		json.NewEncoder(w).Encode(map[string]string{"error": "Filename is required"})
-		return
-	}
-
-	s3ClientPath := filepath.Join(".", "bin", "s3-client")
-	configFilePath := filepath.Join(".", "bin", "s3config.toml")
-	cmd := exec.Command(s3ClientPath, "-config", configFilePath, "-delete", filename)
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		log.Printf("Error deleting file: %s\n", output)
-		json.NewEncoder(w).Encode(map[string]string{
-			"error": fmt.Sprintf("Error deleting file from S3: %s", output),
-		})
-		return
-	}
-
-	response := struct {
-		Message string `json:"message"`
-		Output  string `json:"output"`
-	}{
-		Message: fmt.Sprintf("File %s deleted successfully from S3", filename),
-		Output:  string(output),
-	}
-
-	json.NewEncoder(w).Encode(response)
+	json.NewEncoder(w).Encode(map[string]string{"message": "To delete logs of your sent images from the instance you have sent them to, contact the owner of the instance to do it. "})
+	return
 }
