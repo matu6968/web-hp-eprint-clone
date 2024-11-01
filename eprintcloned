@@ -1,7 +1,7 @@
 #!/bin/bash
 
 printer=examplename # replace this with your actual printer name before putting it into /usr/bin
-imagelogmsg="Server hoster decided to enable file logging, if you don't wish your file to be logged, ask the server owner to delete your sent file or if you are the server hoster set FILELOG=nolog in .env file" # add a custom logging of files message
+imagelogmsg="Server hoster decided to enable file logging, if you don't wish your file to be logged, ask the server owner to delete your sent file or if you are the server hoster set LOG=nolog in .env file" # add a custom logging of files message
 
 # Loop through each file passed as an argument
 for file in "$1"; do
