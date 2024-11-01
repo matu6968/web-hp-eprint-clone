@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 
 	"github.com/joho/godotenv"
 )
@@ -72,12 +73,32 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer file.Close()
-
-	targetmail := r.FormValue("targetmail")
-	if targetmail == "" {
-		fmt.Printf("Warning: User did not specify a mail on sent request")
+	
+	// Regular expression to check if input contains only numbers and hyphens so that user canot execute arbitary code
+	printconfig := r.FormValue("printconfig")
+	if printconfig == "" {
+		fmt.Printf("Warning: User did not specify page range on sent request\n")
+	} else {	
+	    re := regexp.MustCompile(`^[0-9]+(-[0-9]+)*$`)	
+	    if !re.MatchString(printconfig) {
+		    json.NewEncoder(w).Encode(map[string]string{"error": "Invalid page range"})
+		    fmt.Printf("debug: printconfig is: %s\n", printconfig)
+		    return
 	}
-
+}
+	// Regular expression to check if input contains only numbers so that user canot execute arbitary code
+	printres := r.FormValue("res")
+	if printres == "" {
+		fmt.Printf("Warning: User did not specify quality on sent request, assuming normal quality\n")
+		printres = "4"
+	} else {	
+	    re := regexp.MustCompile(`^[1-5]+$`)	
+	    if !re.MatchString(printres) {
+		    json.NewEncoder(w).Encode(map[string]string{"error": "Invalid quality range"})
+		    fmt.Printf("debug: res is: %s\n", printres)
+		    return
+	}
+}
 	tempFileName := filepath.Join(os.TempDir(), handler.Filename)
 	tempFile, err := os.Create(tempFileName)
 	if err != nil {
@@ -96,7 +117,7 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 	
 	printingcmdPath := filepath.Join("/", "usr", "bin", "eprintcloned")
 	filelog := os.Getenv("LOG")
-	cmd := exec.Command(printingcmdPath, tempFile.Name(), filelog, targetmail)
+	cmd := exec.Command(printingcmdPath, tempFile.Name(), filelog, printres, printconfig)
 	
 	output, err := cmd.CombinedOutput()
 	if err != nil {

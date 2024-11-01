@@ -1,8 +1,29 @@
 #!/bin/bash
+# Check for specified arguments 
+if [ $# -lt 3 ]
+then
+    echo "Not enough arguments - exiting"
+    echo ""
+    exit 1
+fi
 
 printer=examplename # replace this with your actual printer name before putting it into /usr/bin
 imagelogmsg="Server hoster decided to enable file logging, if you don't wish your file to be logged, ask the server owner to delete your sent file or if you are the server hoster set LOG=nolog in .env file" # add a custom logging of files message
 
+# check if quality is specified, it it isn't then set the default quality
+if [ $# -gt 4 ]; then
+  quality=$3
+else
+  quality=4
+fi
+
+# check if page range is specified, it it isn't then ignore setting a page range
+if [ $# -gt 4 ]; then
+  pagerange=$4
+else
+  pagerange=""
+fi
+  
 # Loop through each file passed as an argument
 for file in "$1"; do
   # Get the MIME type of the file
@@ -12,22 +33,22 @@ for file in "$1"; do
   if [[ "$mime_type" == image/* || "$mime_type" == application/pdf ]]; then
     if [[ $2 == log ]]; then
        echo $imagelogmsg
-       cp $1 $HOME/imagelog
+       cp "$1" $HOME/imagelog/
        echo "Printing image/document"
-       lpr -o portrait -o media=A4 -o fit-to-page $1 -P $printer # if you are using a different printer that requires different commands to print, change this part of the code.
+       lpr -r -o portrait -o media=A4 -o fit-to-page -o print-quality=$quality $pagerange "$1" -P $printer # if you are using a different printer that requires different commands to print, change this part of the code.
     else
        echo "Printing image/document"
-       lpr -o portrait -o media=A4 -o fit-to-page $1 -P $printer # if you are using a different printer that requires different commands to print, change this part of the code.
+       lpr -r -o portrait -o media=A4 -o fit-to-page -o print-quality=$quality $pagerange "$1" -P $printer # if you are using a different printer that requires different commands to print, change this part of the code.
     fi
   elif [[ "$mime_type" == text/* ]]; then
        if [[ $2 == log ]]; then
           echo $imagelogmsg
-          cp $1 $HOME/imagelog 
+          cp "$1" $HOME/imagelog/
           echo "Printing text"
-          lpr -o portrait -o media=A4 -o fit-to-page $1 -P $printer # if you are using a different printer that requires different commands to print, change this part of the code.
+          lpr -o portrait -o media=A4 -o fit-to-page -o print-quality=$quality $pagerange "$1" -P $printer # if you are using a different printer that requires different commands to print, change this part of the code.
       else
           echo "Printing text"
-          lpr -o portrait -o media=A4 -o fit-to-page $1 -P $printer # if you are using a different printer that requires different commands to print, change this part of the code.
+          lpr -r -o portrait -o media=A4 -o fit-to-page -o print-quality=$quality $pagerange "$1" -P $printer # if you are using a different printer that requires different commands to print, change this part of the code.
      fi
  else
     echo "Error: Invalid file type or, ePrint clone only accepts the following MIME types: text/*, image/*, application/pdf"

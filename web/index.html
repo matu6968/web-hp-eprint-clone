@@ -21,12 +21,21 @@
         <input type="file" accept=".jpg, .jpeg, .png, .gif, .txt, .pdf" name="file" required />
         <input
           type="text"
-          name="targetmail"
-          placeholder="Confirmation e-mail after printing finishes [Optional]"
-          style="width: 210px;"
+          name="printconfig"
+          placeholder="Specify which pages to print (only supported on PDF documents) [Optional]"
+          style="width: 450px;"
         />
         <br />
-        <button type="submit" class="button">Upload</button>
+      <form id="quality">
+      <label for="res">Quality:</label>
+         <select id="res" name="res">
+         <option value="1">1 (Draft)</option>
+         <option value="2">2 (Draft)</option>
+         <option value="3">3 (Draft)</option>
+         <option value="4" selected>4 (Normal)</option>
+         <option value="5">5 (Best)</option>
+  </select>
+        <button type="submit" style="width: 750px;" class="button">Upload</button>
       </form>
     </fieldset>
 

@@ -4,7 +4,7 @@ const commandOutput = document.getElementById('commandOutput');
 
 uploadForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    uploadStatus.textContent = 'Uploading and printing...';
+    uploadStatus.textContent = 'Uploading...';
     commandOutput.textContent = '';
 
     const formData = new FormData(uploadForm);
