@@ -1,0 +1,29 @@
+[Unit]
+Description=HP ePrint clone (on the web)
+Requires=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+
+; Don't forget to change the value here!
+; There is no reason to run this program as root, just use your username
+User=examplename # change this to your username
+
+WorkingDirectory=/path/to/binary # change this to the path where the binary resides
+
+ExecStart=./eprintclone
+
+; Always restart the script
+Restart=always
+
+; cf. https://www.darkcoding.net/software/the-joy-of-systemd/
+; /usr, /boot and /etc are read-only
+ProtectSystem=full
+; /tmp is isolated from all other processes
+PrivateTmp=false
+; Don't allow process to raise privileges (e.g. disable suid)
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

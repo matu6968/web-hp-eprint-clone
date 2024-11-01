@@ -1,0 +1,15 @@
+#!/sbin/openrc-run
+
+name=eprint-clone-web
+description="HP ePrint clone (on the web)"
+
+command="bash -c cd ~/web-hp-eprint-clone && ./eprintclone" # if you have put the eprintclone binary somewhere else change this line
+# Don't forget to change the value here!
+# There is no reason to run this program as root, just use your username
+command_user="userexample" # change this to your username
+
+pidfile="/run/${RC_SVCNAME}.pid"
+
+depend() {
+  need net
+}
