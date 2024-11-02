@@ -5,8 +5,8 @@ This is a HP ePrint clone that has similar functions to normal HP ePrint but it 
 ### To be clear and to not get a C&D from HP, the core isn't similar to HP ePrint (printing over e-mail) just it's functions are similar between them (aka printing files remotely to Your printer)
 
 ## Features
-- Printing PDF, any image file, text, [encoded html render .ini files](https://git.fluffy.pw/matu6968/web-hp-eprint-clone/wiki/Encoded-.ini-files-that-prints-out-a-url), MS Office documents (gets converted to a .pdf files first then print out) and HTML files
-- custom print quality  and page index options
+- Printing PDF, any image file, text, [encoded html render .ini files](https://git.fluffy.pw/matu6968/web-hp-eprint-clone/wiki/Encoded-.ini-files-that-prints-out-a-url), MS Office documents (gets converted to a .pdf file first then print out) and HTML files
+- custom print quality and page index options
 - REST API
 - NSFW scanning (requires DeepAI PRO account and API key)
 
@@ -46,7 +46,7 @@ In the .env file this is the only thing you can set
 ```
 PORT=8080
 LOG=log # enables file logging (aka copies file to user home directory under the folder imagelog so make a folder first in the home root if you wish to enable it), to disable it replace it with nolog
-NSFWSCAN=true # Requires DeepAI API key and DeepAI PRO subscription
+NSFWCHECK=true # Requires DeepAI API key and DeepAI PRO subscription
 ```
 ## Autostart with systemd or OpenRC
 

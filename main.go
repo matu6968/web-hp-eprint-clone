@@ -32,9 +32,15 @@ func main() {
 	}
 	
 	nsfwcheck := os.Getenv("NSFWCHECK")
+	if nsfwcheck == "true" {
+		nsfwcheck = "nsfwcheck"
+	} else
+	if nsfwcheck == "false" {
+		nsfwcheck = ""
+	} else
 	if nsfwcheck == "" {
 		nsfwcheck = ""
-	}
+	} 
 	
 	http.HandleFunc("/", handleIndex)
 	http.HandleFunc("/upload", handleUpload)
