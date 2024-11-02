@@ -1,0 +1,12 @@
+{
+  "name": "web-hp-eprint-clone-web-renderer",
+  "version": "1.0.0",
+  "description": "Web renderer for ePrint clone",
+  "main": "index.js",
+  "repository": "https://git.fluffy.pw/matu6968/web-hp-eprint-clone",
+  "author": "matu6968 <wierzejskimateusz8@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "puppeteer": "^23.6.1"
+  }
+}

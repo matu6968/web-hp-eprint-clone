@@ -1,57 +1,270 @@
 #!/bin/bash
+
 # Check for specified arguments 
 if [ $# -lt 3 ]
 then
     echo "Not enough arguments - exiting"
-    echo ""
+    exit 1
+fi
+
+# Check if LibreOffice is installed
+if type libreoffice &> /dev/null; then
+    echo "libreoffice is installed" > /dev/null
+else
+    echo "LibreOffice is not installed, install LibreOffice from your package manager on your distro"
+    exit 1
+fi
+
+# Check if Node.js is installed
+if type node &> /dev/null; then
+    echo "node is installed" > /dev/null
+else
+    echo "Node.js is not installed, install Node.js from your package manager on your distro"
+    exit 1
+fi
+
+# Check is there is another NSFW scanning instance active
+wait_for_curl_to_finish() {
+    while pgrep -x "curl" > /dev/null; do
+        echo "curl is currently running. Waiting..."
+        sleep 1  # Wait for 1 second before checking again
+    done
+}
+
+# Check is there is another web renderer instance active
+wait_for_node_to_finish() {
+    while pgrep -x "node" > /dev/null; do
+        echo "node is currently running. Waiting..."
+        sleep 1  # Wait for 1 second before checking again
+    done
+}
+
+# Check for the lpr command if it's compatible
+command_name="lpr"
+search_string="lpr - print files"
+
+# Search the man page for the string
+if man "$command_name" 2>/dev/null | grep -q "$search_string"; then
+    echo "$command_name is compatible" > /dev/null
+else
+    echo "Incompatible or not installed lpr program - exiting"
+    echo "Install the right version of the lpr program or if using a distro which ships older packages like lpr, move to a newer distro which has fresher packages."
     exit 1
 fi
 
 printer=examplename # replace this with your actual printer name before putting it into /usr/bin
-imagelogmsg="Server hoster decided to enable file logging, if you don't wish your file to be logged, ask the server owner to delete your sent file or if you are the server hoster set LOG=nolog in .env file" # add a custom logging of files message
-
+imagelogmsg="Server hoster decided to enable file logging, if you don't wish your file to be logged, ask the server owner to delete your sent file or if you are the server hoster set LOG=nolog in .env file" # specify a custom logging of files message
+nsfwscantosmsg="Server hoster enabled NSFW scanning, by sending any images to this instance, you agree to the DeepAI TOS at https://deepai.org/terms-of-service/terms-of-service to scan them." # specify a custom logging of NSFW message
+nsfwscantrue="The following image you uploaded is not safe for work. Due to Cloudflare TOS, you cannot send content promoting NSFW"
+deepaiapikey=00000000-0000-0000-0000-000000000000 # replace zeros with your actual API key
 # check if quality is specified, it it isn't then set the default quality
-if [ $# -gt 4 ]; then
-  quality=$3
+if [[ " $3 " =~ "" ]]; then
+    quality="4"
 else
-  quality=4
+    pagerange="$3"
 fi
 
-# check if page range is specified, it it isn't then ignore setting a page range
-if [ $# -gt 4 ]; then
-  pagerange=$4
+# check if page range is specified, if it is 0 or nothing is specified then ignore setting a page range
+if [[ " $4 " =~ "0" ]]; then
+    pagerange=""
 else
-  pagerange=""
+    pagerange="$4"
 fi
-  
+
+if [[ " $4 " =~ "" ]]; then
+    pagerange=""
+else
+    pagerange="$4"
+fi
+
+# If the user specified for NSFW scanning (.env configuration flag: NSFWSCAN=true) then check if there is a argument passed to scan for it
+# To use the DeepAI NSFW scanning service, provide a API key under the variable deepaiapikey (leave it blank, and specify NSFWSCAN=false in .env if you are not using it)
+if [[ " $@ " =~ "nsfwscan" ]]; then
+    echo $nsfwscantosmsg
+    nsfwscan=yes
+else
+    echo "NSFW scanning is off"
+    nsfwscan=no
+fi
+   
 # Loop through each file passed as an argument
 for file in "$1"; do
   # Get the MIME type of the file
   mime_type=$(file --mime-type -b "$file")
 
-  # Check if the MIME type is for images, text, or PDF files
+  # Check if the MIME type is for images, text, PDF files or any Microsoft Office documents and if NSFW scanning is on, check for NSFW presence
   if [[ "$mime_type" == image/* || "$mime_type" == application/pdf ]]; then
     if [[ $2 == log ]]; then
        echo $imagelogmsg
        cp "$1" $HOME/imagelog/
+       if [ $nsfwscan = "yes" ]
+       then
+           echo "Scanning image for NSFW"
+           API_URL="https://api.deepai.org/api/nsfw-detector"
+           for image in $1; do
+           # Send image to the API and capture both the response and the HTTP status code and if there is another instance running, wait until it closes
+           wait_for_curl_to_finish
+           response=$(curl -s -o /tmp/response.json -w "%{http_code}" -F "image=@$image" -H "api-key: $deepaiapikey" $API_URL)
+           status_code=$(tail -n1 <<< "$response")
+    
+           # Check for HTTP errors (non-200 status code)
+           if [ "$status_code" -ne 200 ]; then
+              echo "Failed to analyze $image: Server returned status code $status_code."
+              continue
+           fi
+    
+           # Read the actual JSON response
+           json_response=$(head -n -1 /tmp/response.json)
+    
+           # Check if the response contains "is_nsfw" field
+           if echo "$json_response" | grep -q '"is_nsfw": true'; then
+               echo $nsfwscantrue
+               exit 1
+               # If NSFW is not detected then print the image
+           elif echo "$json_response" | grep -q '"is_nsfw": false'; then
+               echo "Image is safe, printing."
+           # Check for invalid API key
+           elif echo "$json_response" | grep -q '"status": "Please pass a valid Api-Key in a HTTP header called \"Api-Key\"'; then
+               echo "API key is missing or invalid, skipping NSFW check."
+           else
+               # Handle unexpected JSON structure
+               echo "Unexpected response format for $image: $json_response, skipping NSFW check"
+           fi
+       done
+       fi
        echo "Printing image/document"
-       lpr -r -o portrait -o media=A4 -o fit-to-page -o print-quality=$quality $pagerange "$1" -P $printer # if you are using a different printer that requires different commands to print, change this part of the code.
+       rm /tmp/response.json
+       lpr -r -o portrait -o media=A4 -o fit-to-page -o print-quality=$quality $pagerange "$1" -P $printer && exit 0 # if you are using a different printer that requires different commands to print, change this part of the code.
     else
+       if [ $nsfwscan == "yes" ]
+       then
+           echo "Scanning image for NSFW"
+           API_URL="https://api.deepai.org/api/nsfw-detector"
+           for image in $1; do
+           # Send image to the API and capture both the response and the HTTP status code and if there is another instance running, wait until it closes
+           wait_for_curl_to_finish
+           response=$(curl -s -o /tmp/response.json -w "%{http_code}" -F "image=@$image" -H "api-key: $deepaiapikey" $API_URL)
+           status_code=$(tail -n1 <<< "$response")
+    
+           # Check for HTTP errors (non-200 status code)
+           if [ "$status_code" -ne 200 ]; then
+              echo "Failed to analyze $image: Server returned status code $status_code."
+              continue
+           fi
+    
+           # Read the actual JSON response
+           json_response=$(head -n -1 /tmp/response.json)
+    
+           # Check if the response contains "is_nsfw" field
+           if echo "$json_response" | grep -q '"is_nsfw": true'; then
+               echo $nsfwscantrue
+               exit 1
+               # If NSFW is not detected then print the image
+           elif echo "$json_response" | grep -q '"is_nsfw": false'; then
+               echo "Image is safe, printing."
+           # Check for invalid API key
+           elif echo "$json_response" | grep -q '"status": "Please pass a valid Api-Key in a HTTP header called \"Api-Key\"'; then
+               echo "API key is missing or invalid, skipping NSFW check."
+           else
+               # Handle unexpected JSON structure
+               echo "Unexpected response format for $image: $json_response, skipping NSFW check"
+           fi
+       done
+       fi
        echo "Printing image/document"
-       lpr -r -o portrait -o media=A4 -o fit-to-page -o print-quality=$quality $pagerange "$1" -P $printer # if you are using a different printer that requires different commands to print, change this part of the code.
+       rm /tmp/repsonse.json
+       lpr -r -o portrait -o media=A4 -o fit-to-page -o print-quality=$quality $pagerange "$1" -P $printer && exit 0 # if you are using a different printer that requires different commands to print, change this part of the code.
     fi
+  elif [[ "$mime_type" == text/html ]]; then
+       if [[ $2 == log ]]; then
+          echo $imagelogmsg
+          cp "$1" $HOME/imagelog/
+          echo "Rendering HTML file"
+          wait_for_node_to_finish
+          node index.js $1 /tmp/outputweb.png
+          echo "Printing rendered HTML file"
+          lpr -o portrait -o media=A4 -o fit-to-page -o print-quality=$quality $pagerange "/tmp/outputweb.png" -P $printer && exit 0 # if you are using a different printer that requires different commands to print, change this part of the code.
+      else
+          echo "Rendering HTML file"
+          wait_for_node_to_finish
+          node index.js $1 /tmp/outputweb.png
+          echo "Printing rendered HTML file"
+          lpr -r -o portrait -o media=A4 -o fit-to-page -o print-quality=$quality $pagerange "/tmp/outputweb.png" -P $printer && exit 0 # if you are using a different printer that requires different commands to print, change this part of the code.
+     fi
   elif [[ "$mime_type" == text/* ]]; then
        if [[ $2 == log ]]; then
           echo $imagelogmsg
           cp "$1" $HOME/imagelog/
+          ini_file="$1"
+
+          # Read the ini file and check for the [htmlrender] section and url variable
+          if grep -q '^\[htmlrender\]' "$ini_file"; then
+              # If the header exists, look for the 'url' variable
+              url=$(awk -F= '/^\[htmlrender\]/ {found=1} found && $1~/^url/ {print $2; exit}' "$ini_file" | xargs)
+
+              # Check if url was found
+              if [ -n "$url" ]; then
+                  echo "HTML render file structure detected, rendering site: $url"
+                  wait_for_node_to_finish
+                  node index.js "$url" "/tmp/outputweb.png"
+                  echo "Printing rendered page"
+                  lpr -o portrait -o media=A4 -o fit-to-page -o print-quality=$quality $pagerange "/tmp/outputweb.png" -P $printer && exit 0 # if you are using a different printer that requires different commands to print, change this part of the code.                
+              else
+                  echo "'url' variable not found in [htmlrender] section of text file, assuming normal text"
+              fi
+          else
+              echo "[htmlrender] section not found in text file, assuming normal text"
+fi
           echo "Printing text"
-          lpr -o portrait -o media=A4 -o fit-to-page -o print-quality=$quality $pagerange "$1" -P $printer # if you are using a different printer that requires different commands to print, change this part of the code.
+          lpr -o portrait -o media=A4 -o fit-to-page -o print-quality=$quality $pagerange "$1" -P $printer && exit 0 # if you are using a different printer that requires different commands to print, change this part of the code.
       else
+          ini_file="$1"
+
+          # Read the ini file and check for the [htmlrender] section and url variable
+          if grep -q '^\[htmlrender\]' "$ini_file"; then
+              # If the header exists, look for the 'url' variable
+              url=$(awk -F= '/^\[htmlrender\]/ {found=1} found && $1~/^url/ {print $2; exit}' "$ini_file" | xargs)
+
+              # Check if url was found
+              if [ -n "$url" ]; then
+                  echo "HTML render file structure detected, rendering site: $url"
+                  wait_for_node_to_finish
+                  node index.js "$url" "/tmp/outputweb.png"
+                  echo "Printing rendered page"
+                  lpr -o portrait -o media=A4 -o fit-to-page -o print-quality=$quality $pagerange "/tmp/outputweb.png" -P $printer && exit 0 # if you are using a different printer that requires different commands to print, change this part of the code.                
+              else
+                  echo "'url' variable not found in [htmlrender] section of text file, assuming normal text"
+              fi
+          else
+              echo "[htmlrender] section not found in text file, assuming normal text"
+fi
           echo "Printing text"
-          lpr -r -o portrait -o media=A4 -o fit-to-page -o print-quality=$quality $pagerange "$1" -P $printer # if you are using a different printer that requires different commands to print, change this part of the code.
+          lpr -r -o portrait -o media=A4 -o fit-to-page -o print-quality=$quality $pagerange "$1" -P $printer && exit 0 # if you are using a different printer that requires different commands to print, change this part of the code.
+     fi
+  elif [[ "$mime_type" == application/msword || "$mime_type" == application/vnd.openxmlformats-officedocument.wordprocessingml.document || "$mime_type" == application/vnd.ms-powerpoint || "$mime_type" == application/vnd.openxmlformats-officedocument.presentationml.presentation || "$mime_type" == application/vnd.ms-excel || "$mime_type" == application/vnd.openxmlformats-officedocument.spreadsheetml.sheet ]]; then
+       if [[ $2 == log ]]; then
+          echo $imagelogmsg
+          cp "$1" $HOME/imagelog/
+          echo "Converting Microsoft Office file format to .pdf"
+          filename=$(basename "$1")
+          extensionless="${filename%.*}"
+          echo "converted file is "$extensionless
+          libreoffice --headless --convert-to pdf "$1" --outdir "/tmp/$extensionless" || bash -c 'echo "Conversion failed, try again later" && exit 1'
+          echo "Printing .pdf converted Microsoft Office file"
+          lpr -o portrait -o media=A4 -o fit-to-page -o print-quality=$quality $pagerange "/tmp/$extensionless.pdf" -P $printer # if you are using a different printer that requires different commands to print, change this part of the code.
+          rm "/tmp/$extensionless/$extensionless.pdf" && exit 0
+      else
+          echo "Converting Microsoft Office file format to .pdf"
+          filename=$(basename "$1")
+          extensionless="${filename%.*}"
+          echo "converted file is "$extensionless
+          libreoffice --headless --convert-to pdf "$1"  --outdir "/tmp/$extensionless" || bash -c 'echo "Conversion failed, try again later" && exit 1'
+          echo "Printing .pdf converted Microsoft Office file"
+          lpr -o portrait -o media=A4 -o fit-to-page -o print-quality=$quality $pagerange "/tmp/$extensionless.pdf" -P $printer # if you are using a different printer that requires different commands to print, change this part of the code.
+          rm "/tmp/$extensionless/$extensionless.pdf" && exit 0
      fi
  else
-    echo "Error: Invalid file type or, ePrint clone only accepts the following MIME types: text/*, image/*, application/pdf"
+    echo "Error: Invalid file type or, ePrint clone only accepts the following MIME types: text/*, image/*, application/pdf, application/msword, application/vnd.ms-*, application/vnd.openxmlformats-officedocument*, text/html"
     exit 1
  fi
 done

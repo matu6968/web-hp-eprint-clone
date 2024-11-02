@@ -31,6 +31,11 @@ func main() {
 		port = "8080"
 	}
 	
+	nsfwcheck := os.Getenv("NSFWCHECK")
+	if nsfwcheck == "" {
+		nsfwcheck = ""
+	}
+	
 	http.HandleFunc("/", handleIndex)
 	http.HandleFunc("/upload", handleUpload)
 	http.HandleFunc("/delete", handleDelete)
@@ -117,7 +122,8 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 	
 	printingcmdPath := filepath.Join("/", "usr", "bin", "eprintcloned")
 	filelog := os.Getenv("LOG")
-	cmd := exec.Command(printingcmdPath, tempFile.Name(), filelog, printres, printconfig)
+	nsfwcheck := os.Getenv("NSFWCHECK")
+	cmd := exec.Command(printingcmdPath, tempFile.Name(), filelog, printres, printconfig, nsfwcheck)
 	
 	output, err := cmd.CombinedOutput()
 	if err != nil {
