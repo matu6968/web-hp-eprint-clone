@@ -65,7 +65,7 @@ WorkingDirectory=/path/to/binary # change this to the path where the binary resi
 ### and to add it as a service:
 
 ```
-sudo cp /path/to/cloned/repo/init-scripts/eprint-clone-web.service /etc/systemd/system
+sudo cp /path/to/cloned/repo/init-scripts/eprint-clone-web.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable eprint-clone-web.service
 sudo systemctl start eprint-clone-web.service
@@ -83,7 +83,7 @@ command_user="userexample" # change this to your usernames
 ### and to add it as a service:
 
 ```
-sudo cp /path/to/cloned/repo/init-scripts/eprint-clone-web /etc/init.d/eprint-clone-web
+sudo cp /path/to/cloned/repo/init-scripts/eprint-clone-web /etc/init.d/
 sudo rc-update add eprint-clone-web
 sudo rc-service eprint-clone-web start
 ``` 
