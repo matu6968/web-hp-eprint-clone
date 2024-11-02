@@ -1,3 +1,4 @@
 .env
 bin/*
-s3-client*
+eprintclone
+node_modules
