@@ -8,7 +8,7 @@ This is a HP ePrint clone that has similar functions to normal HP ePrint but it 
 - Printing PDF, any image file, text, [encoded html render .ini files](https://git.fluffy.pw/matu6968/web-hp-eprint-clone/wiki/Encoded-.ini-files-that-prints-out-a-url), MS Office documents (gets converted to a .pdf file first then print out) and HTML files
 - custom print quality and page index options
 - REST API
-- NSFW scanning (requires DeepAI PRO account and API key)
+- ~~NSFW scanning (requires DeepAI PRO account and API key)~~ feature broken and removed
 
 ## Prerequisites
 
@@ -46,7 +46,6 @@ In the .env file this is the only thing you can set
 ```
 PORT=8080
 LOG=log # enables file logging (aka copies file to user home directory under the folder imagelog so make a folder first in the home root if you wish to enable it), to disable it replace it with nolog
-NSFWCHECK=true # Requires DeepAI API key and DeepAI PRO subscription
 ```
 ## Autostart with systemd or OpenRC
 
@@ -87,16 +86,6 @@ sudo cp /path/to/cloned/repo/init-scripts/eprint-clone-web /etc/init.d/
 sudo rc-update add eprint-clone-web
 sudo rc-service eprint-clone-web start
 ``` 
-## DeepAI NSFW scanning
-
-If you would like to open the service up to public, consider enabling NSFW scanning to prevent naughty content from entering your printer.
-To enable it, first make a account on [DeepAI](https://deepai.org), then sign up for a DeepAI PRO subscription to use the API (5$ per month), lastly grab the API from your user dashboard
-`User icon in the top right corner --> View Profile --> API Keys` 
-and put it in your eprintcloned file
-
-```
-deepaiapikey=00000000-0000-0000-0000-000000000000 # replace zeros with your actual API key
-```
 
 ### For this to even work
 You need a linux distro which has the modern equifelent of the lpr program. To check if you have the newer version, type `man lpr` and look at the program description, if it says `lpr - print files` (present on recent Ubuntu versions and rolling release distros like Arch Linux) then you are good to go otherwaise if it says `lpr - off line print` (present on Debian and older Ubuntu versions) then this won't work as the commands for the older version are different and this targets the newer version of the program.
@@ -107,8 +96,7 @@ and put the eprintcloned script (ePrint clone daemon aka it handles the printing
 
 # !IMPORTANT! 
 
-You need to modify the script to include your printer name (it is at the top and is called printer and not the one used in the included configuration in the repository) and to include your 
-DeepAI API key in the eprintcloned script.
+You need to modify the script to include your printer name (it is at the top and is called printer and not the one used in the included configuration in the repository)
 
 for example change it from
 ```

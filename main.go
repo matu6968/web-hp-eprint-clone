@@ -89,6 +89,7 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 	printconfig := r.FormValue("printconfig")
 	if printconfig == "" {
 		fmt.Printf("Warning: User did not specify page range on sent request\n")
+		printconfig = "0"
 	} else {	
 	    re := regexp.MustCompile(`^[0-9]+(-[0-9]+)*$`)	
 	    if !re.MatchString(printconfig) {
@@ -129,6 +130,16 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 	printingcmdPath := filepath.Join("/", "usr", "bin", "eprintcloned")
 	filelog := os.Getenv("LOG")
 	nsfwcheck := os.Getenv("NSFWCHECK")
+	if nsfwcheck == "true" {
+		nsfwcheck = "nsfwcheck"
+	} else
+	if nsfwcheck == "false" {
+		nsfwcheck = ""
+	} else
+	if nsfwcheck == "" {
+		nsfwcheck = ""
+	} 
+	fmt.Printf(printingcmdPath, tempFile.Name(), filelog, printres, printconfig, nsfwcheck)
 	cmd := exec.Command(printingcmdPath, tempFile.Name(), filelog, printres, printconfig, nsfwcheck)
 	
 	output, err := cmd.CombinedOutput()

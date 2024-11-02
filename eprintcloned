@@ -52,11 +52,10 @@ else
     exit 1
 fi
 
-printer=examplename # replace this with your actual printer name before putting it into /usr/bin
+printer=Deskjet-2600 # replace this with your actual printer name before putting it into /usr/bin
 imagelogmsg="Server hoster decided to enable file logging, if you don't wish your file to be logged, ask the server owner to delete your sent file or if you are the server hoster set LOG=nolog in .env file" # specify a custom logging of files message
 nsfwscantosmsg="Server hoster enabled NSFW scanning, by sending any images to this instance, you agree to the DeepAI TOS at https://deepai.org/terms-of-service/terms-of-service to scan them." # specify a custom logging of NSFW message
 nsfwscantrue="The following image you uploaded is not safe for work. Due to Cloudflare TOS, you cannot send content promoting NSFW"
-deepaiapikey=00000000-0000-0000-0000-000000000000 # replace zeros with your actual API key
 # check if quality is specified, it it isn't then set the default quality
 if [[ " $3 " =~ "" ]]; then
     quality="4"
@@ -77,15 +76,6 @@ else
     pagerange="$4"
 fi
 
-# If the user specified for NSFW scanning (.env configuration flag: NSFWSCAN=true) then check if there is a argument passed to scan for it
-# To use the DeepAI NSFW scanning service, provide a API key under the variable deepaiapikey (leave it blank, and specify NSFWSCAN=false in .env if you are not using it)
-if [[ " $@ " =~ "nsfwscan" ]]; then
-    echo $nsfwscantosmsg
-    nsfwscan=yes
-else
-    echo "NSFW scanning is off"
-    nsfwscan=no
-fi
    
 # Loop through each file passed as an argument
 for file in "$1"; do
@@ -97,80 +87,10 @@ for file in "$1"; do
     if [[ $2 == log ]]; then
        echo $imagelogmsg
        cp "$1" $HOME/imagelog/
-       if [ $nsfwscan = "yes" ]
-       then
-           echo "Scanning image for NSFW"
-           API_URL="https://api.deepai.org/api/nsfw-detector"
-           for image in $1; do
-           # Send image to the API and capture both the response and the HTTP status code and if there is another instance running, wait until it closes
-           wait_for_curl_to_finish
-           response=$(curl -s -o /tmp/response.json -w "%{http_code}" -F "image=@$image" -H "api-key: $deepaiapikey" $API_URL)
-           status_code=$(tail -n1 <<< "$response")
-    
-           # Check for HTTP errors (non-200 status code)
-           if [ "$status_code" -ne 200 ]; then
-              echo "Failed to analyze $image: Server returned status code $status_code."
-              continue
-           fi
-    
-           # Read the actual JSON response
-           json_response=$(head -n -1 /tmp/response.json)
-    
-           # Check if the response contains "is_nsfw" field
-           if echo "$json_response" | grep -q '"is_nsfw": true'; then
-               echo $nsfwscantrue
-               exit 1
-               # If NSFW is not detected then print the image
-           elif echo "$json_response" | grep -q '"is_nsfw": false'; then
-               echo "Image is safe, printing."
-           # Check for invalid API key
-           elif echo "$json_response" | grep -q '"status": "Please pass a valid Api-Key in a HTTP header called \"Api-Key\"'; then
-               echo "API key is missing or invalid, skipping NSFW check."
-           else
-               # Handle unexpected JSON structure
-               echo "Unexpected response format for $image: $json_response, skipping NSFW check"
-           fi
-       done
-       fi
        echo "Printing image/document"
        rm /tmp/response.json
        lpr -r -o portrait -o media=A4 -o fit-to-page -o print-quality=$quality $pagerange "$1" -P $printer && exit 0 # if you are using a different printer that requires different commands to print, change this part of the code.
     else
-       if [ $nsfwscan == "yes" ]
-       then
-           echo "Scanning image for NSFW"
-           API_URL="https://api.deepai.org/api/nsfw-detector"
-           for image in $1; do
-           # Send image to the API and capture both the response and the HTTP status code and if there is another instance running, wait until it closes
-           wait_for_curl_to_finish
-           response=$(curl -s -o /tmp/response.json -w "%{http_code}" -F "image=@$image" -H "api-key: $deepaiapikey" $API_URL)
-           status_code=$(tail -n1 <<< "$response")
-    
-           # Check for HTTP errors (non-200 status code)
-           if [ "$status_code" -ne 200 ]; then
-              echo "Failed to analyze $image: Server returned status code $status_code."
-              continue
-           fi
-    
-           # Read the actual JSON response
-           json_response=$(head -n -1 /tmp/response.json)
-    
-           # Check if the response contains "is_nsfw" field
-           if echo "$json_response" | grep -q '"is_nsfw": true'; then
-               echo $nsfwscantrue
-               exit 1
-               # If NSFW is not detected then print the image
-           elif echo "$json_response" | grep -q '"is_nsfw": false'; then
-               echo "Image is safe, printing."
-           # Check for invalid API key
-           elif echo "$json_response" | grep -q '"status": "Please pass a valid Api-Key in a HTTP header called \"Api-Key\"'; then
-               echo "API key is missing or invalid, skipping NSFW check."
-           else
-               # Handle unexpected JSON structure
-               echo "Unexpected response format for $image: $json_response, skipping NSFW check"
-           fi
-       done
-       fi
        echo "Printing image/document"
        rm /tmp/repsonse.json
        lpr -r -o portrait -o media=A4 -o fit-to-page -o print-quality=$quality $pagerange "$1" -P $printer && exit 0 # if you are using a different printer that requires different commands to print, change this part of the code.
