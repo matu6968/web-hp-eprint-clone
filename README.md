@@ -1,20 +1,20 @@
 # HP ePrint like service clone (web edition) 
 
-This is a HP ePrint clone that has similar functions to normal HP ePrint but it is on the web and it is not specific to a given brand of printers (HP ePrint is only available on printers from 2013 - fall 2020)
+This is a HP ePrint clone that has **similar** functions (not nearly 1:1) to normal HP ePrint over a HTTP web server and it is not locked to a given brand of printers (HP ePrint is only available on HP branded printers from 2013 - fall 2020)
 
-### To be clear and to not get a C&D from HP, the core isn't similar to HP ePrint (printing over e-mail) just it's functions are similar between them (aka printing files remotely to Your printer)
+### To be clear and to not get a C&D from HP, the implementation isn't similar to HP ePrint (printing over e-mail, but that will be added soon) just it's functions are similar between them (aka printing files remotely from anywhere to your printer)
 
 ## Features
-- Printing PDF, any image file, text, [encoded html render .ini files](https://git.fluffy.pw/matu6968/web-hp-eprint-clone/wiki/Encoded-.ini-files-that-prints-out-a-url), MS Office documents (gets converted to a .pdf file first then print out) and HTML files
+- Printing PDF, any image file, text, [encoded html render .ini files](https://git.fluffy.pw/matu6968/web-hp-eprint-clone/wiki/Encoded-.ini-files-that-prints-out-a-url), MS Office document formats (first gets converted to a .pdf file and then sends a print job) and HTML files
 - custom print quality and page index options
 - REST API
-- ~~NSFW scanning (requires DeepAI PRO account and API key)~~ feature broken and removed
+- ~~NSFW scanning (requires DeepAI PRO account and API key)~~ feature broken and removed, but might get added on with a different service in the future
 
 ## Prerequisites
 
 - Go (1.23.1 or later, older will work with go.mod changes to the version)
-- Node.js (20 LTS or later, needed for HTML rendering and for .ini html render files to convert to a .png file)
-- LibreOffice (for converting Microsoft Office documents to .pdf)
+- Node.js (20 LTS or later, needed for HTML rendering and for .ini html render files to convert to a .png file) [optional addon]
+- LibreOffice (for converting Microsoft Office documents to .pdf) [optional addon, if not installed then this will be disabled]
 
 ## Installation
 
@@ -31,7 +31,7 @@ This is a HP ePrint clone that has similar functions to normal HP ePrint but it 
 3. Build the binary and install web renderer dependencies:
    ```
    go build -o eprintclone
-   yarn install
+   yarn install // optional, if not installed then the feature will be disabled
    ```
    
 4. Execture the binary:
@@ -88,11 +88,13 @@ sudo rc-service eprint-clone-web start
 ``` 
 
 ### For this to even work
-You need a linux distro which has the modern equifelent of the lpr program. To check if you have the newer version, type `man lpr` and look at the program description, if it says `lpr - print files` (present on recent Ubuntu versions and rolling release distros like Arch Linux) then you are good to go otherwaise if it says `lpr - off line print` (present on Debian and older Ubuntu versions) then this won't work as the commands for the older version are different and this targets the newer version of the program.
+You need a Linux distro which has the modern equifelent of the lpr program (this includes rolling release distros like Arch or new enough LTS releases like Ubuntu 24.04+). The build-in deamon will auto check if you have the newer version, and if it detects a old version, it will error out while processing the print job. 
 
+## Why?
+This is due to the BSD version of lpr being outdated for modern features that the modern lpr command (by OpenPrinting in man page document) grants features on like page range selector or auto determining file types.
 
-Then setup a printer on your host by connecting it over USB or WiFi and then adding the printer in your distro
-and put the eprintcloned script (ePrint clone daemon aka it handles the printing commands) in the "/usr/bin" folder 
+Then setup a printer on your host by connecting it over USB or WiFi and then adding the printer using the tools provided by your distro
+and put the eprintcloned script (ePrint clone daemon aka it handles the printing commands) in the "/usr/bin" folder
 
 # !IMPORTANT! 
 
