@@ -10,26 +10,37 @@ fi
 # Check if LibreOffice is installed
 if type libreoffice &> /dev/null; then
     echo "libreoffice is installed" > /dev/null
+    libreoffice_enabled=1
 else
-    echo "LibreOffice is not installed, install LibreOffice from your package manager on your distro"
-    exit 1
+    echo "LibreOffice is not installed, converting files from formats application/msword, application/vnd.ms-*, application/vnd.openxmlformats-officedocument* to a PDF are disabled"
+    echo "To enable the feature, install LibreOffice from your package manager on your distro"
+    libreoffice_enabled=0
 fi
 
 # Check if Node.js is installed
 if type node &> /dev/null; then
     echo "node is installed" > /dev/null
+    rendercommand_1="node index.js $1 /tmp/outputweb.png"
+    rendercommand_2='echo "Printing rendered HTML file"'
+    rendercommand_3='lpr -o portrait -o media=A4 -o fit-to-page -o print-quality=$quality $pagerange "/tmp/outputweb.png" -P $printer && exit 0 # if you are using a different printer that requires different commands to print, change this part of the code.'
+    urlrendercommand_1='node index.js "$url" "/tmp/outputweb.png"'
+    urlrendercommand_2='echo "Printing rendered page"'
 else
-    echo "Node.js is not installed, install Node.js from your package manager on your distro"
-    exit 1
+    echo "Node.js is not installed, rendering HTML files/encoded .ini files with url prefix will be disabled"
+    echo "To enable the feature, install Node.js from your package manager on your distro or through nvm"
+    rendercommand_1='echo "Optional feature to render HTML files/encoded .ini files with url prefix using Node.js via the puppeteer library has been disabled" 
+    rendercommand_2="exit 1"
+    rendercommand_3=
+    urlrendercommand_1='echo "Optional feature to render HTML files/encoded .ini files with url prefix using Node.js via the puppeteer library has been disabled" 
 fi
 
 # Check is there is another NSFW scanning instance active
-wait_for_curl_to_finish() {
-    while pgrep -x "curl" > /dev/null; do
-        echo "curl is currently running. Waiting..."
-        sleep 1  # Wait for 1 second before checking again
-    done
-}
+# wait_for_curl_to_finish() {
+#    while pgrep -x "curl" > /dev/null; do
+#        echo "curl is currently running. Waiting..."
+#        sleep 1  # Wait for 1 second before checking again
+#    done
+#}
 
 # Check is there is another web renderer instance active
 wait_for_node_to_finish() {
@@ -52,7 +63,7 @@ else
     exit 1
 fi
 
-printer=Deskjet-2600 # replace this with your actual printer name before putting it into /usr/bin
+printer=examplename # replace this with your actual printer name before putting it into /usr/bin
 imagelogmsg="Server hoster decided to enable file logging, if you don't wish your file to be logged, ask the server owner to delete your sent file or if you are the server hoster set LOG=nolog in .env file" # specify a custom logging of files message
 nsfwscantosmsg="Server hoster enabled NSFW scanning, by sending any images to this instance, you agree to the DeepAI TOS at https://deepai.org/terms-of-service/terms-of-service to scan them." # specify a custom logging of NSFW message
 nsfwscantrue="The following image you uploaded is not safe for work. Due to Cloudflare TOS, you cannot send content promoting NSFW"
@@ -101,15 +112,9 @@ for file in "$1"; do
           cp "$1" $HOME/imagelog/
           echo "Rendering HTML file"
           wait_for_node_to_finish
-          node index.js $1 /tmp/outputweb.png
-          echo "Printing rendered HTML file"
-          lpr -o portrait -o media=A4 -o fit-to-page -o print-quality=$quality $pagerange "/tmp/outputweb.png" -P $printer && exit 0 # if you are using a different printer that requires different commands to print, change this part of the code.
-      else
-          echo "Rendering HTML file"
-          wait_for_node_to_finish
-          node index.js $1 /tmp/outputweb.png
-          echo "Printing rendered HTML file"
-          lpr -r -o portrait -o media=A4 -o fit-to-page -o print-quality=$quality $pagerange "/tmp/outputweb.png" -P $printer && exit 0 # if you are using a different printer that requires different commands to print, change this part of the code.
+          $rendercommand_1
+          $rendercommand_2
+          $rendercommand_3
      fi
   elif [[ "$mime_type" == text/* ]]; then
        if [[ $2 == log ]]; then
@@ -126,9 +131,9 @@ for file in "$1"; do
               if [ -n "$url" ]; then
                   echo "HTML render file structure detected, rendering site: $url"
                   wait_for_node_to_finish
-                  node index.js "$url" "/tmp/outputweb.png"
-                  echo "Printing rendered page"
-                  lpr -o portrait -o media=A4 -o fit-to-page -o print-quality=$quality $pagerange "/tmp/outputweb.png" -P $printer && exit 0 # if you are using a different printer that requires different commands to print, change this part of the code.                
+                  $urlrendercommand_1
+                  $urlrendercommand_2
+                  $urlrendercommand_3               
               else
                   echo "'url' variable not found in [htmlrender] section of text file, assuming normal text"
               fi
@@ -149,9 +154,9 @@ fi
               if [ -n "$url" ]; then
                   echo "HTML render file structure detected, rendering site: $url"
                   wait_for_node_to_finish
-                  node index.js "$url" "/tmp/outputweb.png"
-                  echo "Printing rendered page"
-                  lpr -o portrait -o media=A4 -o fit-to-page -o print-quality=$quality $pagerange "/tmp/outputweb.png" -P $printer && exit 0 # if you are using a different printer that requires different commands to print, change this part of the code.                
+                  $urlrendercommand_1
+                  $urlrendercommand_2
+                  $urlrendercommand_3                
               else
                   echo "'url' variable not found in [htmlrender] section of text file, assuming normal text"
               fi
@@ -163,25 +168,35 @@ fi
      fi
   elif [[ "$mime_type" == application/msword || "$mime_type" == application/vnd.openxmlformats-officedocument.wordprocessingml.document || "$mime_type" == application/vnd.ms-powerpoint || "$mime_type" == application/vnd.openxmlformats-officedocument.presentationml.presentation || "$mime_type" == application/vnd.ms-excel || "$mime_type" == application/vnd.openxmlformats-officedocument.spreadsheetml.sheet ]]; then
        if [[ $2 == log ]]; then
-          echo $imagelogmsg
-          cp "$1" $HOME/imagelog/
-          echo "Converting Microsoft Office file format to .pdf"
-          filename=$(basename "$1")
-          extensionless="${filename%.*}"
-          echo "converted file is "$extensionless
-          libreoffice --headless --convert-to pdf "$1" --outdir "/tmp/$extensionless" || bash -c 'echo "Conversion failed, try again later" && exit 1'
-          echo "Printing .pdf converted Microsoft Office file"
-          lpr -o portrait -o media=A4 -o fit-to-page -o print-quality=$quality $pagerange "/tmp/$extensionless.pdf" -P $printer # if you are using a different printer that requires different commands to print, change this part of the code.
-          rm "/tmp/$extensionless/$extensionless.pdf" && exit 0
+          if [[ $libreoffice_enabled == 0 ]]; then
+                  echo "Optional feature to convert files from MS Office formats to PDF using LibreOffice has been disabled"
+                  exit 0
+          else
+                  echo $imagelogmsg
+                  cp "$1" $HOME/imagelog/
+                  echo "Converting Microsoft Office file format to .pdf"
+                  filename=$(basename "$1")
+                  extensionless="${filename%.*}"
+                  echo "converted file is "$extensionless"
+                  libreoffice --headless --convert-to pdf "$1" --outdir "/tmp/$extensionless" || bash -c 'echo "Conversion failed, try again later" && exit 1'
+                  echo "Printing .pdf converted Microsoft Office file"
+                  lpr -o portrait -o media=A4 -o fit-to-page -o print-quality=$quality $pagerange "/tmp/$extensionless.pdf" -P $printer # if you are using a different printer that requires different commands to print, change this part of the code.
+                  rm "/tmp/$extensionless/$extensionless.pdf" && exit 0 
+        fi
       else
-          echo "Converting Microsoft Office file format to .pdf"
-          filename=$(basename "$1")
-          extensionless="${filename%.*}"
-          echo "converted file is "$extensionless
-          libreoffice --headless --convert-to pdf "$1"  --outdir "/tmp/$extensionless" || bash -c 'echo "Conversion failed, try again later" && exit 1'
-          echo "Printing .pdf converted Microsoft Office file"
-          lpr -o portrait -o media=A4 -o fit-to-page -o print-quality=$quality $pagerange "/tmp/$extensionless.pdf" -P $printer # if you are using a different printer that requires different commands to print, change this part of the code.
-          rm "/tmp/$extensionless/$extensionless.pdf" && exit 0
+          if [[ $libreoffice_enabled == 0 ]]; then
+                  echo "Optional feature to convert files from MS Office formats to PDF using LibreOffice has been disabled"
+                  exit 0
+          else
+                  echo "Converting Microsoft Office file format to .pdf"
+                  filename=$(basename "$1")
+                  extensionless="${filename%.*}"
+                  echo "converted file is "$extensionless"
+                  libreoffice --headless --convert-to pdf "$1" --outdir "/tmp/$extensionless" || bash -c 'echo "Conversion failed, try again later" && exit 1'
+                  echo "Printing .pdf converted Microsoft Office file"
+                  lpr -o portrait -o media=A4 -o fit-to-page -o print-quality=$quality $pagerange "/tmp/$extensionless.pdf" -P $printer # if you are using a different printer that requires different commands to print, change this part of the code.
+                  rm "/tmp/$extensionless/$extensionless.pdf" && exit 0 
+        fi
      fi
  else
     echo "Error: Invalid file type or, ePrint clone only accepts the following MIME types: text/*, image/*, application/pdf, application/msword, application/vnd.ms-*, application/vnd.openxmlformats-officedocument*, text/html"
