@@ -29,10 +29,10 @@ if type node &> /dev/null; then
 else
     echo "Node.js is not installed, rendering HTML files/encoded .ini files with url prefix will be disabled"
     echo "To enable the feature, install Node.js from your package manager on your distro or through nvm"
-    rendercommand_1='echo "Optional feature to render HTML files/encoded .ini files with url prefix using Node.js via the puppeteer library has been disabled" 
+    rendercommand_1='echo "Optional feature to render HTML files/encoded .ini files with url prefix using Node.js via the puppeteer library has been disabled"' 
     rendercommand_2="exit 1"
     rendercommand_3=
-    urlrendercommand_1='echo "Optional feature to render HTML files/encoded .ini files with url prefix using Node.js via the puppeteer library has been disabled"
+    urlrendercommand_1='echo "Optional feature to render HTML files/encoded .ini files with url prefix using Node.js via the puppeteer library has been disabled"'
     urlrendercommand_2="exit 1"
     urlrendercommand_3=""
 fi
