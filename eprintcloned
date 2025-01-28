@@ -25,13 +25,16 @@ if type node &> /dev/null; then
     rendercommand_3='lpr -o portrait -o media=A4 -o fit-to-page -o print-quality=$quality $pagerange "/tmp/outputweb.png" -P $printer && exit 0 # if you are using a different printer that requires different commands to print, change this part of the code.'
     urlrendercommand_1='node index.js "$url" "/tmp/outputweb.png"'
     urlrendercommand_2='echo "Printing rendered page"'
+    urlrendercommand_3='lpr -o portrait -o media=A4 -o fit-to-page -o print-quality=$quality $pagerange "/tmp/outputweb.png" -P $printer && exit 0 # if you are using a different printer that requires different commands to print, change this part of the code.'
 else
     echo "Node.js is not installed, rendering HTML files/encoded .ini files with url prefix will be disabled"
     echo "To enable the feature, install Node.js from your package manager on your distro or through nvm"
     rendercommand_1='echo "Optional feature to render HTML files/encoded .ini files with url prefix using Node.js via the puppeteer library has been disabled" 
     rendercommand_2="exit 1"
     rendercommand_3=
-    urlrendercommand_1='echo "Optional feature to render HTML files/encoded .ini files with url prefix using Node.js via the puppeteer library has been disabled" 
+    urlrendercommand_1='echo "Optional feature to render HTML files/encoded .ini files with url prefix using Node.js via the puppeteer library has been disabled"
+    urlrendercommand_2="exit 1"
+    urlrendercommand_3=""
 fi
 
 # Check is there is another NSFW scanning instance active
